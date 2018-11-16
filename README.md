@@ -1,6 +1,6 @@
 # udp_echo_server
 just for fun
-stm32+lwip+enc28j60
+stm32f407-discovery + lwip + enc28j60 + FreeRTOS
 платка enc28j60 подключена на SPI2 на stm32
 RESET-PB0
 SCK-PB10
