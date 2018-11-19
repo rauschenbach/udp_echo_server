@@ -1,10 +1,10 @@
 # udp_echo_server
+enc28j60 + FreeRTOS + stm32f407-discovery + lwip 
+
 Сделано для новой станции GNS. Так как на stm32f407 выводы интерфейса RMII/MII сидят на тех же ногах, что и 
 выводы HS-USB. Скорость большая не нужна, а для посылки данных в seismic unix spi ethernet карты будет достаточно
 
-stm32f407-discovery + lwip + enc28j60 + FreeRTOS
-
-платка enc28j60 подключена на SPI2 на stm32
+платка enc28j60 подключена по SPI2 на stm32
 
 RESET-PB0
 
