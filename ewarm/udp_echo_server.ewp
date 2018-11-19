@@ -953,12 +953,6 @@
     </settings>
   </configuration>
   <group>
-    <name>eth</name>
-    <file>
-      <name>$PROJ_DIR$\..\eth\enc28j60.c</name>
-    </file>
-  </group>
-  <group>
     <name>library</name>
     <group>
       <name>CMSIS</name>
@@ -1014,13 +1008,13 @@
         <name>$PROJ_DIR$\..\library\lwip\src\core\dns.c</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\..\library\lwip\port\enc28j60.c</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\library\lwip\src\api\err.c</name>
       </file>
       <file>
         <name>$PROJ_DIR$\..\library\lwip\src\netif\etharp.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\library\lwip\port\ethernetif.c</name>
       </file>
       <file>
         <name>$PROJ_DIR$\..\library\lwip\src\core\ipv4\icmp.c</name>
