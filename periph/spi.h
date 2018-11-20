@@ -50,7 +50,7 @@
 #define ETH_RESET_HI()     do { GPIO_SetBits(ETH_SPI_RESET_GPIO_PORT, ETH_SPI_RESET_PIN); } while(0)
 
 
-#define ETH_CS_LOW()    do { GPIO_ResetBits(ETH_SPI_CS_GPIO_PORT, ETH_SPI_CS_PIN); } while(0)
+#define ETH_CS_LOW()    do {  GPIO_ResetBits(ETH_SPI_CS_GPIO_PORT, ETH_SPI_CS_PIN); } while(0)
 #define ETH_CS_HI()     do { GPIO_SetBits(ETH_SPI_CS_GPIO_PORT, ETH_SPI_CS_PIN); } while(0)
 
 

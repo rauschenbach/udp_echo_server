@@ -20,13 +20,13 @@ void spi_init(void)
 
 	GPIO_PinAFConfig(ETH_SPI_SCK_GPIO_PORT, ETH_SPI_SCK_GPIO_PIN_SOURCE, ETH_GPIO_AF);
 	GPIO_PinAFConfig(ETH_SPI_MOSI_GPIO_PORT, ETH_SPI_MOSI_GPIO_PIN_SOURCE, ETH_GPIO_AF);
-	GPIO_PinAFConfig(ETH_SPI_MISO_GPIO_PORT, ETH_SPI_MISO_GPIO_PIN_SOURCE, ETH_GPIO_AF);
+	GPIO_PinAFConfig(ETH_SPI_MISO_GPIO_PORT, ETH_SPI_MISO_GPIO_PIN_SOURCE, ETH_GPIO_AF);       
 
 
 	/* Init GPIO */
 	GPIO_StructInit(&GPIO_InitStructure);
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 
@@ -43,19 +43,19 @@ void spi_init(void)
 	/*!< SPI MISO pin configuration */
 	GPIO_InitStructure.GPIO_Pin = ETH_SPI_MISO_PIN;
 	GPIO_Init(ETH_SPI_MISO_GPIO_PORT, &GPIO_InitStructure);
-
+        
 
 	/* SPI configuration */
 	SPI_I2S_DeInit(ETH_SPI);
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
 	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-	SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-//	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+//	SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
         
 
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+  	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2; /* ~18 MHz */
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
@@ -67,16 +67,16 @@ void spi_init(void)
 	GPIO_InitStructure.GPIO_Pin = ETH_SPI_RESET_PIN;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(ETH_SPI_RESET_GPIO_PORT, &GPIO_InitStructure);
-
-
+        
 	/* Configure CS */
 	GPIO_InitStructure.GPIO_Pin = ETH_SPI_CS_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(ETH_SPI_CS_GPIO_PORT, &GPIO_InitStructure);
+
+        
+        
+
 
 	ETH_RESET_LOW();	/*  RESET hi */
         for(int i = 0; i < 10000; i++);
@@ -107,7 +107,11 @@ u8 spi_in_out(u8 data)
 	data = (uint8_t) SPI_I2S_ReceiveData(ETH_SPI);
         
         /* Задержка. CS налезает на последний импульс */
-	for(i = 0; i < 100; i++);
+	__NOP();
+	__NOP();
+        __NOP();
+	__NOP();
+	__NOP();        
         return data;
 }
          
