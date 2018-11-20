@@ -10,6 +10,7 @@
 #include <tcpip.h>
 #include <main.h>
 #include <FreeRTOS.h>
+#include "udpecho.h"
 
 
 #define 	TASK_NAME		"eth task"
@@ -20,7 +21,6 @@ static void eth_task(void *p);
 int eth_create_task(void)
 {
     xTaskHandle task = NULL;
-    int i;
 
     xTaskCreate(eth_task, TASK_NAME, configMINIMAL_STACK_SIZE, NULL, ETH_TASK_PRIORITY, &task);
     if (task == NULL) {
@@ -34,11 +34,10 @@ int eth_create_task(void)
 }
 
 
-
 /**
  * Задача
  */
-void eth_task(void *p)
+static void eth_task(void *p)
 {
     int sockfd;			/* Сокет */
     struct sockaddr_in local;
@@ -48,8 +47,8 @@ void eth_task(void *p)
     static char buf[1024];
     struct timeval t0;
     long opt;
-    
-    
+
+
     FD_ZERO(&readfds);
     FD_ZERO(&rfds);
 

@@ -40,28 +40,21 @@
   * OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE CODING INFORMATION
   * CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
   ******************************************************************************
-  */ 
+  */
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __NETCONF_H
 #define __NETCONF_H
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
-   
-/* Includes ------------------------------------------------------------------*/
-/* Exported types ------------------------------------------------------------*/
-/* Exported constants --------------------------------------------------------*/
-/* Exported macro ------------------------------------------------------------*/
-/* Exported functions ------------------------------------------------------- */
+
+int dhcp_create_task(void);
 void LwIP_Init(void);
-void LwIP_DHCP_task(void * pvParameters);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __NETCONF_H */
+#endif				/* __NETCONF_H */
 
-
-/*********** Portions COPYRIGHT 2012 Embest Tech. Co., Ltd.*****END OF FILE****/
