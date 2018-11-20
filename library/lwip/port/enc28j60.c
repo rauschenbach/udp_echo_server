@@ -45,19 +45,19 @@
 
 static struct netif *s_pxNetIf = NULL;
 static xSemaphoreHandle s_xSemaphore = NULL;	/* Семафор для ожидающей задачи приема */
+static uint8_t enc28j60_current_bank = 0;
+static uint16_t enc28j60_rxrdpt = 0;
+
 
 #pragma pack(4)
 static u8 EthFrame[ETH_FRAME_SIZE] = { 0 };	/* Intermediate buffer */
 static u8 rx_reg = 0;	/* Биты регистров прерывания по чтению */
+
 /* Forward declarations. */
 static void enc28j60_input(struct netif *netif);
 static uint16_t enc28j60_read_frame(u8 *);
 static int8_t enc28j60_write_frame(u8 *, uint16_t);
-void enc28j60_periodic_task(void *);
-
-
-static uint8_t enc28j60_current_bank = 0;
-static uint16_t enc28j60_rxrdpt = 0;
+static void enc28j60_periodic_task(void *);
 
 
 /* Generic SPI read command */
@@ -91,15 +91,14 @@ static void enc28j60_soft_reset()
     enc28j60_release();
 
     enc28j60_current_bank = 0;
-    for (int i = 0; i < 10000; i++);
-    //vTaskDelay(1);            // Wait until device initializes
+//    vTaskDelay(1);            // Wait until device initializes
+    for(int i = 0; i < 10000; i++);	
 }
 
 
 /*
  * Memory access
  */
-
 /* Set register bank */
 static void enc28j60_set_bank(uint8_t adr)
 {
@@ -289,7 +288,8 @@ static int8_t enc28j60_write_frame(u8 * Frame, uint16_t Len)
     enc28j60_wcr16(ETXST, ENC28J60_TXSTART);
     enc28j60_wcr16(ETXND, ENC28J60_TXSTART + Len);
 
-    enc28j60_bfs(ECON1, ECON1_TXRTS);	// Request packet send
+    /* Request packet send */
+    enc28j60_bfs(ECON1, ECON1_TXRTS);
 
 
     return ERR_OK;
@@ -424,7 +424,7 @@ static void low_level_init(struct netif *netif)
 
     /* Создадим задачу, чтобы она опрашивала eth1 */
     xTaskCreate(enc28j60_periodic_task, "enc28j60 periodic", netifINTERFACE_TASK_STACK_SIZE, s_pxNetIf,
-		netifINTERFACE_TASK_PRIORITY + 3, &task);
+		netifINTERFACE_TASK_PRIORITY, &task);
     if (task == NULL) {
 	printf("ERROR: Create enc28j60 periodic Task\r\n");
 	vTaskDelete(task);
@@ -655,7 +655,7 @@ err_t enc28j60_init(struct netif *netif)
  * Вызывается каждый раз в бесконечном цикле
  * Здесь определяем задачи которые должны выполняться
  */
-void enc28j60_periodic_task(void *par)
+static void enc28j60_periodic_task(void *par)
 {
     while (1) {
                 /* Пока есть ожидающие пакеты в буфере */
@@ -674,12 +674,11 @@ void enc28j60_periodic_task(void *par)
 void enc28j60_isr(void)
 {
 	portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
-	rx_reg = enc28j60_rcr(EIR);
-        
+	rx_reg = enc28j60_rcr(EIR);      
       
 	/* Прием, переполнение или потеря пакета */
 	if (rx_reg & EIR_PKTIF) {
+               STM_EVAL_LEDToggle(LED6);
 		xSemaphoreGiveFromISR(s_xSemaphore, &xHigherPriorityTaskWoken);
 	}
 

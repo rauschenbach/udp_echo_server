@@ -400,7 +400,7 @@
 #define	ETH_FRAME_SIZE				1514
 #define netifMTU                                (1500)
 #define netifINTERFACE_TASK_STACK_SIZE		(configMINIMAL_STACK_SIZE)
-#define netifINTERFACE_TASK_PRIORITY		(tskIDLE_PRIORITY + 3)
+#define netifINTERFACE_TASK_PRIORITY		(tskIDLE_PRIORITY + 5)
 #define netifGUARD_BLOCK_TIME			(250)
 
 
