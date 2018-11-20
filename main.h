@@ -10,15 +10,21 @@
 #include <portable.h>
 #include <semphr.h>
 #include <task.h>
+#include <udpecho.h>
 
-#include "stm32f4xx.h"
-#include "enc28j60.h"
+#include <stm32f4xx.h>
+#include <enc28j60.h>
+
+#include <stm32f4_discovery.h>   
+#include <serial_debug.h>
+
+   
    
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 
 #define USE_LCD        /* enable LCD  */  
-#undef USE_LCD        /* enable LCD  */  
+#undef  USE_LCD        /* enable LCD  */  
 
 //#define USE_DHCP       /* enable DHCP, if disabled static address is used*/
     
@@ -43,11 +49,8 @@
 #define GW_ADDR2   6
 #define GW_ADDR3   1  
 
-/* MII and RMII mode selection, for STM324xG-EVAL Board(MB786) RevB ***********/
-#define RMII_MODE 
 
-/* Exported macro ------------------------------------------------------------*/
-/* Exported functions ------------------------------------------------------- */  
+
 void Time_Update(void);
 void Delay(uint32_t nCount);
 
@@ -58,6 +61,4 @@ void Delay(uint32_t nCount);
 
 #endif /* __MAIN_H */
 
-
-/*********** Portions COPYRIGHT 2012 Embest Tech. Co., Ltd.*****END OF FILE****/
 

@@ -3,23 +3,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "tcpip.h"
-#include "serial_debug.h"
-#include "stm32f4_discovery.h"
-
-#define MESSAGE1   "     STM32F4x7      "
-#define MESSAGE2   "  STM32F-4 Series   "
-#define MESSAGE3   " UDP/TCP EchoServer "
-#define MESSAGE4   "                    "
 
 
-#define DHCP_TASK_PRIO   ( tskIDLE_PRIORITY + 2 )      
-#define LED_TASK_PRIO    ( tskIDLE_PRIORITY + 1 )
+#define LED_TASK_PRIO    (tskIDLE_PRIORITY + 3)
 
 extern struct netif xnetif;
 __IO uint32_t test;
  
 static void periph_init(void);
-void LCD_LED_Init(void);
 extern void udpecho_init(void);
 
 void ToggleLed4(void * pvParameters)
@@ -40,20 +31,14 @@ void ToggleLed4(void * pvParameters)
   * @retval None
   */
 int main(void)
-{
-  
+{ 
   periph_init();
  
   eth_create_task();
+  dhcp_create_task();  
 
-//#ifdef USE_DHCP
-  /* Start DHCPClient */
-  xTaskCreate(LwIP_DHCP_task, "DHCPClient", configMINIMAL_STACK_SIZE * 2, NULL,DHCP_TASK_PRIO + 2, NULL);
-//#endif
-
-  
-  xTaskCreate(ToggleLed4, "LED4", configMINIMAL_STACK_SIZE, NULL, LED_TASK_PRIO+2, NULL);
-  
+  xTaskCreate(ToggleLed4, "LED4", configMINIMAL_STACK_SIZE, NULL, LED_TASK_PRIO, NULL);
+ 
   vTaskStartScheduler();
 
   for( ;; );
@@ -64,7 +49,10 @@ int main(void)
  */
 static void periph_init(void)
 {
-  LCD_LED_Init();  
+  STM_EVAL_LEDInit(LED3);
+  STM_EVAL_LEDInit(LED4);
+  STM_EVAL_LEDInit(LED5);
+  STM_EVAL_LEDInit(LED6);
   LwIP_Init();
 }
 
