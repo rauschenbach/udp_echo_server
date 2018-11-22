@@ -11,10 +11,6 @@
 #include "spi.h"
 #include "enc28j60.h"
 
-#define 	ETH_PHY_ADDR			0x1C
-#define 	ETH_MDIO_CTRL_DIV		1
-#define 	ETH_MODE			ETH_PHY_CONTROL_MODE_AUTO	/*ETH_PHY_CONTROL_MODE_100M_FD */
-
 
 /* Define those to better describe your network interface. */
 #define 	IFNAME0 			'e'
@@ -42,7 +38,6 @@
 #define enc28j60_tx(data) spi_in_out(data)
 
 
-
 static struct netif *s_pxNetIf = NULL;
 static xSemaphoreHandle s_xSemaphore = NULL;	/* Семафор для ожидающей задачи приема */
 static uint8_t enc28j60_current_bank = 0;
@@ -51,7 +46,7 @@ static uint16_t enc28j60_rxrdpt = 0;
 
 #pragma pack(4)
 static u8 EthFrame[ETH_FRAME_SIZE] = { 0 };	/* Intermediate buffer */
-static u8 rx_reg = 0;	/* Биты регистров прерывания по чтению */
+static u8 rx_reg = 0;		/* Биты регистров прерывания по чтению */
 
 /* Forward declarations. */
 static void enc28j60_input(struct netif *netif);
@@ -92,7 +87,7 @@ static void enc28j60_soft_reset()
 
     enc28j60_current_bank = 0;
 //    vTaskDelay(1);            // Wait until device initializes
-    for(int i = 0; i < 10000; i++);	
+    for (int i = 0; i < 10000; i++);	// не в контексте ОС
 }
 
 
@@ -227,7 +222,7 @@ static void exti2_irq_config(void)
     exti2.EXTI_LineCmd = ENABLE;
     EXTI_Init(&exti2);
 
-    /* Enable and set EXTI Line2 Interrupt*/
+    /* Enable and set EXTI Line2 Interrupt */
     nvic.NVIC_IRQChannel = EXTI2_IRQn;
     nvic.NVIC_IRQChannelPreemptionPriority = 0x02;
     nvic.NVIC_IRQChannelSubPriority = 0x02;
@@ -251,8 +246,9 @@ static u16 enc28j60_read_frame(u8 * Frame)
 	/* success */
 	if (status & 0x80) {
 	    len = rxlen - 4;	//throw out crc
-	    if (len > ETH_FRAME_SIZE)
+	    if (len > ETH_FRAME_SIZE) {
 		len = ETH_FRAME_SIZE;
+            }
 	    enc28j60_read_buffer(Frame, len);
 	}
 	/* Set Rx read pointer to next packet */
@@ -418,7 +414,7 @@ static void low_level_init(struct netif *netif)
 
     /* Делаем счетный семафор! */
     if (s_xSemaphore == NULL) {
-	s_xSemaphore = xSemaphoreCreateCounting(10, 0);
+	s_xSemaphore = xSemaphoreCreateCounting(20, 0);
 	//s_xSemaphore = xSemaphoreCreateBinary();
     }
 
@@ -435,7 +431,7 @@ static void low_level_init(struct netif *netif)
     /* Разрешим прерывания от платки ethernet */
     exti2_irq_config();
 
-    enc28j60_wcr(EIE, EIE_INTIE | EIE_PKTIE);     /*  Глобальный флаг разрешения прерываний - разрешение выхода ~INT + pending Interrupt */
+    enc28j60_wcr(EIE, EIE_INTIE | EIE_PKTIE);	/*  Глобальный флаг разрешения прерываний - разрешение выхода ~INT + pending Interrupt */
 }
 
 /**
@@ -658,12 +654,21 @@ err_t enc28j60_init(struct netif *netif)
 static void enc28j60_periodic_task(void *par)
 {
     while (1) {
-                /* Пока есть ожидающие пакеты в буфере */
-      		if (xSemaphoreTake(s_xSemaphore, -1) == pdTRUE) {
-			do {
-			   enc28j60_input(s_pxNetIf);
-			} while (enc28j60_rcr(EIR) & EIR_PKTIF);
-		}
+	/* Пока есть ожидающие пакеты в буфере */
+	if (xSemaphoreTake(s_xSemaphore, -1) == pdTRUE) {
+	    do {
+		enc28j60_input(s_pxNetIf);
+		rx_reg = enc28j60_rcr(EIR);
+
+		/* попробуем пока очистить */
+		if (rx_reg & EIR_RXERIF) {
+		    enc28j60_bfc(EIR, EIR_RXERIF);
+		    printf("Rx overflow %02X\r\n", rx_reg);
+                    
+                    //enc28j60_wcr(EIE, EIE_INTIE | EIE_RXERIE);	/*  Глобальный флаг разрешения прерываний - разрешение выхода ~INT + pending Interrupt */                    
+		}               
+	    } while (rx_reg & EIR_PKTIF);
+	}
     }
 }
 
@@ -671,19 +676,13 @@ static void enc28j60_periodic_task(void *par)
 /**
  * Функция обработки прерываний платки ethernet
  */
-void enc28j60_isr(void)
+void enc28j60_isr(void* par)
 {
-	portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-	rx_reg = enc28j60_rcr(EIR);      
-      
-	/* Прием, переполнение или потеря пакета */
-	if (rx_reg & EIR_PKTIF) {
-               STM_EVAL_LEDToggle(LED6);
-		xSemaphoreGiveFromISR(s_xSemaphore, &xHigherPriorityTaskWoken);
-	}
+    rx_reg = enc28j60_rcr(EIR);
 
-	/* Switch tasks if necessary. */
-	if (xHigherPriorityTaskWoken != pdFALSE) {
-		portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
-	}
+    /* Прием, переполнение или потеря пакета */
+    if (rx_reg & EIR_PKTIF) {
+	STM_EVAL_LEDToggle(LED6);
+        xSemaphoreGiveFromISR(s_xSemaphore, (signed portBASE_TYPE *)par);
+    }
 }

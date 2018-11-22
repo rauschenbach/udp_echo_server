@@ -9,12 +9,12 @@
 
 #define ENC28J60_BUFSIZE	0x2000
 #define ENC28J60_RXSIZE		0x1A00
-#define ENC28J60_BUFEND		(ENC28J60_BUFSIZE-1)
+#define ENC28J60_BUFEND		(ENC28J60_BUFSIZE - 1)
 
 #define ENC28J60_MAXFRAME	1500
 
 #define ENC28J60_RXSTART	0
-#define ENC28J60_RXEND		(ENC28J60_RXSIZE-1)
+#define ENC28J60_RXEND		(ENC28J60_RXSIZE - 1)
 #define ENC28J60_TXSTART	ENC28J60_RXSIZE
 
 #define ENC28J60_SPI_RCR	0x00
@@ -397,10 +397,10 @@
 #define PHLCON_STRCH		0x0002
 
 
-#define	ETH_FRAME_SIZE				1514
-#define netifMTU                                (1500)
+#define	ETH_FRAME_SIZE				ENC28J60_MAXFRAME /* 1514 */
+#define netifMTU                                ENC28J60_MAXFRAME
 #define netifINTERFACE_TASK_STACK_SIZE		(configMINIMAL_STACK_SIZE)
-#define netifINTERFACE_TASK_PRIORITY		(tskIDLE_PRIORITY + 5)
+#define netifINTERFACE_TASK_PRIORITY		(tskIDLE_PRIORITY + 4)
 #define netifGUARD_BLOCK_TIME			(250)
 
 
@@ -418,7 +418,7 @@ struct ethernetif {
 
 /* Init ENC28J60 */
 err_t enc28j60_init(struct netif *netif);
-void enc28j60_isr(void);
+void enc28j60_isr(void*);
 
 
 
