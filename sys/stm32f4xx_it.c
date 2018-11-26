@@ -1,49 +1,3 @@
-/**
-  ******************************************************************************
-  * @file    stm32f4xx_it.c 
-  * @author  MCD Application Team
-  * @version V1.0.0
-  * @date    31-October-2011
-  * @brief   Main Interrupt Service Routines.
-  *          This file provides template for all exceptions handler and 
-  *          peripherals interrupt service routine.
-  ******************************************************************************
-  * @attention
-  *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
-  *
-  * <h2><center>&copy; Portions COPYRIGHT 2011 STMicroelectronics</center></h2>
-  ******************************************************************************
-  */
- /**
-  ******************************************************************************
-  * <h2><center>&copy; Portions COPYRIGHT 2012 Embest Tech. Co., Ltd.</center></h2>
-  * @file    stm32f4xx_it.c
-  * @author  CMP Team
-  * @version V1.0.0
-  * @date    28-December-2012
-  * @brief   Main Interrupt Service Routines.
-  *          This file provides template for all exceptions handler and 
-  *          peripherals interrupt service routine.     
-  *          Modified to support the STM32F4DISCOVERY, STM32F4DIS-BB and
-  *          STM32F4DIS-LCD modules. 
-  ******************************************************************************
-  * @attention
-  *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, Embest SHALL NOT BE HELD LIABLE FOR ANY DIRECT, INDIRECT
-  * OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING FROM THE CONTENT
-  * OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE CODING INFORMATION
-  * CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
-  ******************************************************************************
-  */
-/* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
 #include "main.h"
 
@@ -62,7 +16,7 @@
 /* Private variables ---------------------------------------------------------*/
 extern xSemaphoreHandle s_xSemaphore;
 /* Private function prototypes -----------------------------------------------*/
-extern void xPortSysTickHandler(void); 
+extern void xPortSysTickHandler(void);
 /* Private functions ---------------------------------------------------------*/
 
 /******************************************************************************/
@@ -85,10 +39,9 @@ void NMI_Handler(void)
   */
 void HardFault_Handler(void)
 {
-  /* Go to infinite loop when Hard Fault exception occurs */
-  while (1)
-  {
-  }
+    /* Go to infinite loop when Hard Fault exception occurs */
+    while (1) {
+    }
 }
 
 /**
@@ -98,10 +51,9 @@ void HardFault_Handler(void)
   */
 void MemManage_Handler(void)
 {
-  /* Go to infinite loop when Memory Manage exception occurs */
-  while (1)
-  {
-  }
+    /* Go to infinite loop when Memory Manage exception occurs */
+    while (1) {
+    }
 }
 
 /**
@@ -111,10 +63,9 @@ void MemManage_Handler(void)
   */
 void BusFault_Handler(void)
 {
-  /* Go to infinite loop when Bus Fault exception occurs */
-  while (1)
-  {
-  }
+    /* Go to infinite loop when Bus Fault exception occurs */
+    while (1) {
+    }
 }
 
 /**
@@ -124,19 +75,9 @@ void BusFault_Handler(void)
   */
 void UsageFault_Handler(void)
 {
-  /* Go to infinite loop when Usage Fault exception occurs */
-  while (1)
-  {
-  }
-}
-
-/**
-  * @brief  This function handles SVCall exception.
-  * @param  None
-  * @retval None
-  */
-void ___SVC_Handler(void)
-{
+    /* Go to infinite loop when Usage Fault exception occurs */
+    while (1) {
+    }
 }
 
 /**
@@ -148,48 +89,21 @@ void DebugMon_Handler(void)
 {
 }
 
+
 /**
-  * @brief  This function handles PendSVC exception.
-  * @param  None
-  * @retval None
-  */
-void ___PendSV_Handler(void)
+ * Прерывание Ethernet платки на ноге PA0
+ */
+void EXTI0_IRQHandler(void)
 {
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+    /* Сбрасываем флаг прерываний */
+    if (EXTI_GetITStatus(EXTI_Line0) != RESET) {
+	EXTI_ClearITPendingBit(EXTI_Line0);              
+	enc28j60_isr(&xHigherPriorityTaskWoken);        
+    }
+    /* Switch tasks if necessary. */
+    if (xHigherPriorityTaskWoken != pdFALSE) {
+	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+    } 
 }
-
-/**
-  * @brief  This function handles SysTick Handler.
-  * @param  None
-  * @retval None
-  */
-void ___SysTick_Handler(void)
-{
-  xPortSysTickHandler(); 
-}
-
-/**
-  * @brief  This function handles ethernet DMA interrupt request.
-  * @param  None
-  * @retval None
-  */
-void ETH_IRQHandler(void)
-{
-}
-
-/******************************************************************************/
-/*                 STM32F4xx Peripherals Interrupt Handlers                   */
-/*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */
-/*  available peripheral interrupt handler's name please refer to the startup */
-/*  file (startup_stm32f4xx.s).                                               */
-/******************************************************************************/
-/**
-  * @brief  This function handles PPP interrupt request.
-  * @param  None
-  * @retval None
-  */
-/*void PPP_IRQHandler(void)
-{
-}*/
-
-
-/*********** Portions COPYRIGHT 2012 Embest Tech. Co., Ltd.*****END OF FILE****/
