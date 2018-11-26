@@ -18,7 +18,7 @@
 
 
 /* MAC ADDRESS*/
-#define       FULL_MAC                        "Казань"
+#define       FULL_MAC                        "РљР°Р·Р°РЅСЊ"
 
 #define MAC_ADDR0   FULL_MAC[0]
 #define MAC_ADDR1   FULL_MAC[1]
@@ -39,20 +39,22 @@
 
 
 static struct netif *s_pxNetIf = NULL;
-static xSemaphoreHandle s_xSemaphore = NULL;	/* Семафор для ожидающей задачи приема */
+static xSemaphoreHandle s_xSemaphore = NULL;	/* РЎРµРјР°С„РѕСЂ РґР»СЏ РѕР¶РёРґР°СЋС‰РµР№ Р·Р°РґР°С‡Рё РїСЂРёРµРјР° */
 static uint8_t enc28j60_current_bank = 0;
 static uint16_t enc28j60_rxrdpt = 0;
 
 
 #pragma pack(4)
 static u8 EthFrame[ETH_FRAME_SIZE] = { 0 };	/* Intermediate buffer */
-static u8 rx_reg = 0;		/* Биты регистров прерывания по чтению */
+static u8 rx_reg = 0;		/* Р‘РёС‚С‹ СЂРµРіРёСЃС‚СЂРѕРІ РїСЂРµСЂС‹РІР°РЅРёСЏ РїРѕ С‡С‚РµРЅРёСЋ */
 
 /* Forward declarations. */
 static void enc28j60_input(struct netif *netif);
 static uint16_t enc28j60_read_frame(u8 *);
 static int8_t enc28j60_write_frame(u8 *, uint16_t);
 static void enc28j60_periodic_task(void *);
+
+static void print_regs(void);
 
 
 /* Generic SPI read command */
@@ -87,7 +89,7 @@ static void enc28j60_soft_reset()
 
     enc28j60_current_bank = 0;
 //    vTaskDelay(1);            // Wait until device initializes
-    for (int i = 0; i < 10000; i++);	// не в контексте ОС
+    for (int i = 0; i < 10000; i++);	// РЅРµ РІ РєРѕРЅС‚РµРєСЃС‚Рµ РћРЎ
 }
 
 
@@ -192,50 +194,51 @@ static void enc28j60_write_phy(uint8_t adr, uint16_t data)
 
 
 /**
- * Установка обработчика прерываний на PB2
+ * РЈСЃС‚Р°РЅРѕРІРєР° РѕР±СЂР°Р±РѕС‚С‡РёРєР° РїСЂРµСЂС‹РІР°РЅРёР№ РЅР° PA0 
+ * С‡С‚РѕР±С‹ РјРѕР¶РЅРѕ Р±С‹Р»Рѕ СЃРёРјСѓР»РёСЂРѕРІР°С‚СЊ РєРЅРѕРїРєРѕР№
  */
-static void exti2_irq_config(void)
+static void exti0_irq_config(void)
 {
-    EXTI_InitTypeDef exti2;
+    EXTI_InitTypeDef exti0;
     GPIO_InitTypeDef gpio;
     NVIC_InitTypeDef nvic;
 
     /* Enable GPIOB clock */
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 
     /* Enable SYSCFG clock */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
-    /* Configure PB2 pin as input floating - подтянем вверх */
+    /* Configure PA0 pin as input floating - РїРѕРґС‚СЏРЅРµРј РІРІРµСЂС… */
     gpio.GPIO_Mode = GPIO_Mode_IN;
     gpio.GPIO_PuPd = GPIO_PuPd_UP;
-    gpio.GPIO_Pin = GPIO_Pin_2;
-    GPIO_Init(GPIOB, &gpio);
+    gpio.GPIO_Pin = GPIO_Pin_0;
+    GPIO_Init(GPIOA, &gpio);
 
-    /* Connect EXTI Line2 to PB2 pin */
-    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource2);
+    /* Connect EXTI Line0 to PA0 pin */
+    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
 
-    /* Configure EXTI Line2 */
-    exti2.EXTI_Line = EXTI_Line2;
-    exti2.EXTI_Mode = EXTI_Mode_Interrupt;
-    exti2.EXTI_Trigger = EXTI_Trigger_Falling;
-    exti2.EXTI_LineCmd = ENABLE;
-    EXTI_Init(&exti2);
+    /* Configure EXTI Line0 */
+    exti0.EXTI_Line = EXTI_Line0;
+    exti0.EXTI_Mode = EXTI_Mode_Interrupt;
+    exti0.EXTI_Trigger = EXTI_Trigger_Falling;
+    exti0.EXTI_LineCmd = ENABLE;
+    EXTI_Init(&exti0);
 
-    /* Enable and set EXTI Line2 Interrupt */
-    nvic.NVIC_IRQChannel = EXTI2_IRQn;
+    /* Enable and set EXTI Line0 Interrupt */
+    nvic.NVIC_IRQChannel = EXTI0_IRQn;
     nvic.NVIC_IRQChannelPreemptionPriority = 0x02;
     nvic.NVIC_IRQChannelSubPriority = 0x02;
     nvic.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&nvic);
 }
 
-/* Чтение кадра ethernet */
+/* Р§С‚РµРЅРёРµ РєР°РґСЂР° ethernet */
 static u16 enc28j60_read_frame(u8 * Frame)
 {
     u16 len = 0, rxlen, status, temp;
 
-    /* Если есть пакеты */
+    /* Р•СЃР»Рё РµСЃС‚СЊ РїР°РєРµС‚С‹ */
     if (enc28j60_rcr(EPKTCNT)) {
 	enc28j60_wcr16(ERDPT, enc28j60_rxrdpt);
 
@@ -263,7 +266,7 @@ static u16 enc28j60_read_frame(u8 * Frame)
 }
 
 /**
- * Передача кадра ethernet 
+ * РџРµСЂРµРґР°С‡Р° РєР°РґСЂР° ethernet 
  */
 static int8_t enc28j60_write_frame(u8 * Frame, uint16_t Len)
 {
@@ -292,13 +295,12 @@ static int8_t enc28j60_write_frame(u8 * Frame, uint16_t Len)
 }
 
 /**
- * Здесь функции используемые lwIP
+ * Р—РґРµСЃСЊ С„СѓРЅРєС†РёРё РёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ lwIP
  */
 static void low_level_init(struct netif *netif)
 {
     struct ethernetif *eth = netif->state;
     xTaskHandle task = NULL;
-    u16 data;
 
     /* Initialize SPI */
     spi_init();
@@ -335,41 +337,11 @@ static void low_level_init(struct netif *netif)
     enc28j60_wcr(MAADR2, MAC_ADDR3);
     enc28j60_wcr(MAADR1, MAC_ADDR4);
     enc28j60_wcr(MAADR0, MAC_ADDR5);
+    
+    
+    print_regs();
 
-
-    data = enc28j60_rcr16(ERXST);
-    printf("ERXST=%04X\r\n", data);
-    data = enc28j60_rcr16(ERXRDPT);
-    printf("ERXRDPT=%04X\r\n", data);
-    data = enc28j60_rcr16(ERXND);
-    printf("ERXND=%04X\r\n", data);
-    data = enc28j60_rcr(MACON1);
-    printf("MACON1=%02X\r\n", data);
-    data = enc28j60_rcr(MACON2);
-    printf("MACON2=%02X\r\n", data);
-    data = enc28j60_rcr(MACON3);
-    printf("MACON3=%02X\r\n", data);
-    data = enc28j60_rcr16(MAMXFL);
-    printf("MAMXFL=%04X\r\n", data);
-    data = enc28j60_rcr(MABBIPG);
-    printf("MABBIPG=%02X\r\n", data);
-    data = enc28j60_rcr(MAIPGL);
-    printf("MAIPGL=%02X\r\n", data);
-    data = enc28j60_rcr(MAIPGH);
-    printf("MAIPGH=%02X\r\n", data);
-    data = enc28j60_rcr(MAADR5);
-    printf("MAADR5=%02X\r\n", data);
-    data = enc28j60_rcr(MAADR4);
-    printf("MAADR4=%02X\r\n", data);
-    data = enc28j60_rcr(MAADR3);
-    printf("MAADR3=%02X\r\n", data);
-    data = enc28j60_rcr(MAADR2);
-    printf("MAADR2=%02X\r\n", data);
-    data = enc28j60_rcr(MAADR1);
-    printf("MAADR1=%02X\r\n", data);
-    data = enc28j60_rcr(MAADR0);
-    printf("MAADR0=%02X\r\n", data);
-
+    
     /* Setup PHY */
     enc28j60_write_phy(PHCON1, PHCON1_PDPXMD);	// Force full-duplex mode
     enc28j60_write_phy(PHCON2, PHCON2_HDLDIS);	// Disable loopback
@@ -412,13 +384,13 @@ static void low_level_init(struct netif *netif)
 
     s_pxNetIf = netif;
 
-    /* Делаем счетный семафор! */
+    /* Р”РµР»Р°РµРј СЃС‡РµС‚РЅС‹Р№ СЃРµРјР°С„РѕСЂ! */
     if (s_xSemaphore == NULL) {
 	s_xSemaphore = xSemaphoreCreateCounting(20, 0);
 	//s_xSemaphore = xSemaphoreCreateBinary();
     }
 
-    /* Создадим задачу, чтобы она опрашивала eth1 */
+    /* РЎРѕР·РґР°РґРёРј Р·Р°РґР°С‡Сѓ, С‡С‚РѕР±С‹ РѕРЅР° РѕРїСЂР°С€РёРІР°Р»Р° eth1 */
     xTaskCreate(enc28j60_periodic_task, "enc28j60 periodic", netifINTERFACE_TASK_STACK_SIZE, s_pxNetIf,
 		netifINTERFACE_TASK_PRIORITY, &task);
     if (task == NULL) {
@@ -428,10 +400,10 @@ static void low_level_init(struct netif *netif)
     printf("SUCCESS: Create enc28j60 periodic Task. Mac addr: %02X-%02X-%02X-%02X-%02X-%02X\r\n",
 	   FULL_MAC[0], FULL_MAC[1], FULL_MAC[2], FULL_MAC[3], FULL_MAC[4], FULL_MAC[5]);
 
-    /* Разрешим прерывания от платки ethernet */
-    exti2_irq_config();
+    /* Р Р°Р·СЂРµС€РёРј РїСЂРµСЂС‹РІР°РЅРёСЏ РѕС‚ РїР»Р°С‚РєРё ethernet */
+    exti0_irq_config();
 
-    enc28j60_wcr(EIE, EIE_INTIE | EIE_PKTIE);	/*  Глобальный флаг разрешения прерываний - разрешение выхода ~INT + pending Interrupt */
+    enc28j60_wcr(EIE, EIE_INTIE | EIE_PKTIE);	/*  Р“Р»РѕР±Р°Р»СЊРЅС‹Р№ С„Р»Р°Рі СЂР°Р·СЂРµС€РµРЅРёСЏ РїСЂРµСЂС‹РІР°РЅРёР№ - СЂР°Р·СЂРµС€РµРЅРёРµ РІС‹С…РѕРґР° ~INT + pending Interrupt */
 }
 
 /**
@@ -457,7 +429,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
     static xSemaphoreHandle xTxSemaphore = NULL;
     err_t Err;
 
-    /* семафор, чтобы не входить еще раз если предыдущие данные не переданы */
+    /* СЃРµРјР°С„РѕСЂ, С‡С‚РѕР±С‹ РЅРµ РІС…РѕРґРёС‚СЊ РµС‰Рµ СЂР°Р· РµСЃР»Рё РїСЂРµРґС‹РґСѓС‰РёРµ РґР°РЅРЅС‹Рµ РЅРµ РїРµСЂРµРґР°РЅС‹ */
   if (xTxSemaphore == NULL) {
     vSemaphoreCreateBinary (xTxSemaphore);
   } 
@@ -487,7 +459,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
     LINK_STATS_INC(link.xmit);
     
-    /* Отдаем семафор */
+    /* РћС‚РґР°РµРј СЃРµРјР°С„РѕСЂ */
     xSemaphoreGive(xTxSemaphore);
    }
     return Err;
@@ -659,24 +631,27 @@ err_t enc28j60_init(struct netif *netif)
 
 
 /**
- * Вызывается каждый раз в бесконечном цикле
- * Здесь определяем задачи которые должны выполняться
+ * Р’С‹Р·С‹РІР°РµС‚СЃСЏ РєР°Р¶РґС‹Р№ СЂР°Р· РІ Р±РµСЃРєРѕРЅРµС‡РЅРѕРј С†РёРєР»Рµ
+ * Р—РґРµСЃСЊ РѕРїСЂРµРґРµР»СЏРµРј Р·Р°РґР°С‡Рё РєРѕС‚РѕСЂС‹Рµ РґРѕР»Р¶РЅС‹ РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ
  */
 static void enc28j60_periodic_task(void *par)
 {
     while (1) {
-	/* Пока есть ожидающие пакеты в буфере */
+	/* РџРѕРєР° РµСЃС‚СЊ РѕР¶РёРґР°СЋС‰РёРµ РїР°РєРµС‚С‹ РІ Р±СѓС„РµСЂРµ */
 	if (xSemaphoreTake(s_xSemaphore, -1) == pdTRUE) {
 	    do {
 		enc28j60_input(s_pxNetIf);
 		rx_reg = enc28j60_rcr(EIR);
+                /* РћС‡РёС‰Р°РµРј С„Р»Р°Рі РїСЂРёРµРјР° */
+		enc28j60_bfc(EIR, EIR_PKTIF);                
 
-		/* попробуем пока очистить */
+		/* РїРѕРїСЂРѕР±СѓРµРј РїРѕРєР° РѕС‡РёСЃС‚РёС‚СЊ */
 		if (rx_reg & EIR_RXERIF) {
 		    enc28j60_bfc(EIR, EIR_RXERIF);
 		    printf("Rx overflow %02X\r\n", rx_reg);
+                    print_regs();
                     
-                    //enc28j60_wcr(EIE, EIE_INTIE | EIE_RXERIE);	/*  Глобальный флаг разрешения прерываний - разрешение выхода ~INT + pending Interrupt */                    
+                    //enc28j60_wcr(EIE, EIE_INTIE | EIE_RXERIE);	/*  Р“Р»РѕР±Р°Р»СЊРЅС‹Р№ С„Р»Р°Рі СЂР°Р·СЂРµС€РµРЅРёСЏ РїСЂРµСЂС‹РІР°РЅРёР№ - СЂР°Р·СЂРµС€РµРЅРёРµ РІС‹С…РѕРґР° ~INT + pending Interrupt */                    
 		}               
 	    } while (rx_reg & EIR_PKTIF);
 	}
@@ -685,15 +660,52 @@ static void enc28j60_periodic_task(void *par)
 
 
 /**
- * Функция обработки прерываний платки ethernet
+ * Р¤СѓРЅРєС†РёСЏ РѕР±СЂР°Р±РѕС‚РєРё РїСЂРµСЂС‹РІР°РЅРёР№ РїР»Р°С‚РєРё ethernet
  */
 void enc28j60_isr(void* par)
 {
     rx_reg = enc28j60_rcr(EIR);
 
-    /* Прием, переполнение или потеря пакета */
+    /* РџСЂРёРµРј, РїРµСЂРµРїРѕР»РЅРµРЅРёРµ РёР»Рё РїРѕС‚РµСЂСЏ РїР°РєРµС‚Р° */
     if (rx_reg & EIR_PKTIF) {
 	STM_EVAL_LEDToggle(LED6);
         xSemaphoreGiveFromISR(s_xSemaphore, (signed portBASE_TYPE *)par);
     }
+}
+
+
+void print_regs(void){
+    u16 data;      
+    data = enc28j60_rcr16(ERXST);
+    printf("ERXST=%04X\r\n", data);
+    data = enc28j60_rcr16(ERXRDPT);
+    printf("ERXRDPT=%04X\r\n", data);
+    data = enc28j60_rcr16(ERXND);
+    printf("ERXND=%04X\r\n", data);
+    data = enc28j60_rcr(MACON1);
+    printf("MACON1=%02X\r\n", data);
+    data = enc28j60_rcr(MACON2);
+    printf("MACON2=%02X\r\n", data);
+    data = enc28j60_rcr(MACON3);
+    printf("MACON3=%02X\r\n", data);
+    data = enc28j60_rcr16(MAMXFL);
+    printf("MAMXFL=%04X\r\n", data);
+    data = enc28j60_rcr(MABBIPG);
+    printf("MABBIPG=%02X\r\n", data);
+    data = enc28j60_rcr(MAIPGL);
+    printf("MAIPGL=%02X\r\n", data);
+    data = enc28j60_rcr(MAIPGH);
+    printf("MAIPGH=%02X\r\n", data);
+    data = enc28j60_rcr(MAADR5);
+    printf("MAADR5=%02X\r\n", data);
+    data = enc28j60_rcr(MAADR4);
+    printf("MAADR4=%02X\r\n", data);
+    data = enc28j60_rcr(MAADR3);
+    printf("MAADR3=%02X\r\n", data);
+    data = enc28j60_rcr(MAADR2);
+    printf("MAADR2=%02X\r\n", data);
+    data = enc28j60_rcr(MAADR1);
+    printf("MAADR1=%02X\r\n", data);
+    data = enc28j60_rcr(MAADR0);
+    printf("MAADR0=%02X\r\n", data);
 }
