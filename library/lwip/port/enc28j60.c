@@ -454,9 +454,17 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 {
     struct pbuf *q;
     int framelen = 0;
-
+    static xSemaphoreHandle xTxSemaphore = NULL;
     err_t Err;
 
+    /* семафор, чтобы не входить еще раз если предыдущие данные не переданы */
+  if (xTxSemaphore == NULL) {
+    vSemaphoreCreateBinary (xTxSemaphore);
+  } 
+    
+   if (xSemaphoreTake(xTxSemaphore, netifGUARD_BLOCK_TIME)) {
+
+  
 #if ETH_PAD_SIZE
     pbuf_header(p, -ETH_PAD_SIZE);	/* drop the padding word */
 #endif
@@ -478,7 +486,10 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 #endif
 
     LINK_STATS_INC(link.xmit);
-
+    
+    /* Отдаем семафор */
+    xSemaphoreGive(xTxSemaphore);
+   }
     return Err;
 }
 
